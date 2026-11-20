@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]  # SPDX string in `license`
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hic-et-nunc"
+version = "0.1.0"
+description = "Process-based evidence of human authorship for commissioned illustration"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9,<5.1",
+    "scikit-image>=0.22",
+]
+
+[project.optional-dependencies]
+c2pa = ["c2pa-python>=0.37", "cryptography>=42"]
+dev = ["pytest>=8", "ruff~=0.17.5", "c2pa-python>=0.37", "cryptography>=42"]
+
+[project.scripts]
+hic-et-nunc = "hic_et_nunc.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 79  # PEP 8 maximum
+src = ["src", "tests"]  # first-party: hic_et_nunc, and conftest for tests
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle: PEP 8
+    "N",       # pep8-naming: PEP 8 naming conventions
+    "F",       # Pyflakes: Ruff's default set, kept since `select` replaces it
+    "I",       # isort: import sorting
+    "D",       # pydocstyle: PEP 257
+]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 72  # PEP 8: docstrings and comments
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+# PEP 257 asks for docstrings on exported names; test modules export none.
+"tests/**" = ["D100", "D101", "D102", "D103"]

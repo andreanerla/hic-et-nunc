@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=hic_et_nunc_capture
+X-Python-2-Compatible=false
+Name=Hic et nunc Capture (spike)
+Comment=Records pen input and canvas snapshots locally, for provenance research
