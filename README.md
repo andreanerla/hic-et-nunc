@@ -30,6 +30,9 @@ a dispute about who made a piece.
 [a tracing over a Matisse cut-out](https://andreanerla.github.io/hic-et-nunc/examples/reports/matisse-2-tracing.html)
 (needs review). Files: `examples/reports/`.
 
+<a href="https://andreanerla.github.io/hic-et-nunc/examples/reports/free-drawing.html"><img src="examples/reports/free-drawing.jpg" width="49%" alt="Report for a free drawing: consistent"></a>
+<a href="https://andreanerla.github.io/hic-et-nunc/examples/reports/matisse-2-tracing.html"><img src="examples/reports/matisse-2-tracing.jpg" width="49%" alt="Report for a tracing over a Matisse cut-out: needs review"></a>
+
 **Try it.** About two minutes on a Mac with Python 3.10 or newer: follow
 Install, then "Try it with synthetic data" (no Krita needed). Recording
 your own drawings needs Krita 5 and a pen tablet.
