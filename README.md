@@ -1,16 +1,41 @@
 # hic et nunc
 
-Checks whether a finished illustration is consistent with a recorded drawing
-process. The main, most tested workflow records the drawing in Krita with
-the included plugin, then writes one HTML report about the piece. It can
-also read a time-lapse after the fact (an exported time-lapse video, or a
-Procreate `.procreate` file, never tried on a real one). Either way it
-checks that the last recorded state matches the image that was delivered,
-and flags large detailed regions that appeared in a single step (pastes).
-If you give a reference image, it also measures whether the line work
-follows its edges (tracing). It writes an HTML report, or prints a JSON
-report and a verdict from a configurable policy. It is a research
-prototype and a Python command-line tool, not a service.
+An experimental command-line tool that checks whether a finished
+illustration is consistent with a recording of how it was drawn.
+
+**What it does.** A plugin for [Krita](https://krita.org) records your
+drawing while you work: pen strokes, a picture of the canvas every 5
+seconds, and Krita actions such as paste. Afterwards `hic-et-nunc report`
+reads the recording and writes one web page with a result (consistent,
+needs review or inconsistent) and the reasons. It checks that the
+recording's entries still link up, that the delivered image matches the
+last recorded state, whether images were pasted in and, if you give it a
+reference image, whether the lines follow that image's outlines
+(tracing). It can also read a time-lapse video, with weaker results.
+
+**What it doesn't do.** It doesn't prove who made an image, that a
+person made it, or that no AI was used. A program can write a recording
+that passes, and tracing an image the tool isn't given goes unnoticed
+([`EVALUATION.md`](EVALUATION.md)). It is not an AI detector. Tested by one
+person, on one Mac, with one tablet.
+
+**Who might find it useful.** People studying what a recording of the
+drawing process can and can't show; developers of drawing-tool plugins;
+artists who want a record of their own process. It is not ready to settle
+a dispute about who made a piece.
+
+**See a result.** Two reports from the author's own Krita recordings:
+[a free drawing](https://andreanerla.github.io/hic-et-nunc/examples/reports/free-drawing.html)
+(consistent) and
+[a tracing over a Matisse cut-out](https://andreanerla.github.io/hic-et-nunc/examples/reports/matisse-2-tracing.html)
+(needs review). Files: `examples/reports/`.
+
+**Try it.** About two minutes on a Mac with Python 3.10 or newer: follow
+Install, then "Try it with synthetic data" (no Krita needed). Recording
+your own drawings needs Krita 5 and a pen tablet.
+
+**Status.** Experimental, version 0.1.0. See
+[Status and maintenance](#status-and-maintenance).
 
 ## What it does not prove
 
@@ -270,6 +295,16 @@ grayscale.
   recording started; only `report` does. A recording started on line
   art (0.34% of the canvas) gets "needs review" from `report` but
   "pass" from `evaluate`.
+- Tracing is checked only against a reference image given to the
+  command. Tracing an image that isn't given, or that is declared as
+  your own (`own=`), isn't detected: three real tracings got
+  "consistent" from `report` and "pass" from `evaluate`, also under the
+  policy named "P1 no generative AI" (`EVALUATION.md`, E1).
+- A recording written by a program, with no Krita and no person
+  (pressure constant, samples exactly 5 ms apart), gets "consistent" and
+  tier "strong", and the report says it was "Recorded live in Krita,
+  with a pen tablet". The recording holds whatever its writer put in it
+  (`EVALUATION.md`, E2).
 - How much of a declared reference survives in the final image isn't
   measured; pasted references are caught by paste detection instead.
 - How AI detectors behave on traced or redrawn AI images is unmeasured.
@@ -353,8 +388,66 @@ development certificates (validators report them as untrusted).
   short commit hashes to the private development history. Neither is
   published.
 
+## Status and maintenance
+
+hic et nunc is an experimental research tool. It works as this README
+describes and is tested on macOS only. There is no release schedule and
+no promised feature work; it may stay as it is for long periods. Pull
+requests are reviewed. Forks are welcome: everything needed to run, test
+and change the tool is in this repository, except the author's own
+recordings behind the 49 skipped tests.
+
+## Contributing
+
+To propose a change, open a pull request; for a larger change, open an
+issue first so the approach can be agreed. Before sending it:
+
+```bash
+pip install -e ".[dev]"
+pytest                                # 81 passed, 49 skipped
+ruff check . && ruff format --check .
+```
+
+Say what you changed and how you checked it. A change to the analysis or
+to a result needs a test showing the cases it separates. Don't commit
+drawings, `.kra` or `.procreate` files from other people. What the code
+does is summarized in Modules above; what has been tested and attacked is
+in [`EVALUATION.md`](EVALUATION.md) and `plugins/krita/SPIKE.md`.
+
+Bounded pieces of work, each tied to a known gap:
+
+- **Check the `.procreate` reader against a real file** (intermediate;
+  needs Procreate). The reader expects the time-lapse at
+  `video/segments/segment-N.mp4`, a layout taken from public
+  descriptions; no real file has been opened (`timelapse.py`). Done
+  when one real file has been read, its result is reported with its own
+  exported image and with an altered one, and the reader is fixed if
+  the layout differs. Report the results, not the file.
+- **Run it on Linux or Windows** (intermediate). Only macOS 15 has been
+  tested. Done when `pytest` results on another system are reported in
+  an issue, with fixes for what fails. On Windows the plugin's
+  capability report also shows whether Krita's pen input bypasses the
+  events the plugin records (see Known limitations).
+- **Command help and a clean error for a bad output path** (beginner).
+  `hic-et-nunc --help` lists seven commands with no description, and
+  `report -o /no/such/dir/x.html` ends in a Python traceback (`cli.py`).
+  Done when each command has a one-line description and a bad path gives
+  a message and exit code 2, with a test that fails without the fix.
+- **Why opencv 5.1 moves a paste box** (intermediate). With
+  opencv-python-headless 5.1.0,
+  `tests/test_timelapse.py::test_paste_visible_in_video` finds the
+  paste's lower edge at 250 (the test needs more than 250), so
+  `pyproject.toml` caps opencv below 5.1. Done when the cause is named,
+  and the cap is either removed with the test passing on both versions
+  or kept with the measured reason.
+- **Impossible pauses inside strokes** (advanced). The bundled
+  free-drawing log, `tests/data/krita/free`, has a pause of 56,475 s
+  between two consecutive pen samples of one stroke. Stroke timings derived from them are wrong; the effect on results is
+  unmeasured (`plugins/krita/hic_et_nunc_capture/capture.py`,
+  `session.py`). Done when the cause is found, its effect on the tracing
+  ratio is measured, and it is fixed in the plugin or the reader.
+
 ## License
 
-AGPL-3.0-only. See `LICENSE`.
-
-Not accepting outside contributions for now.
+AGPL-3.0-only. See `LICENSE`. Contributions are accepted under the same
+license.
