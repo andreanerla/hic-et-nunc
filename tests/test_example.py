@@ -1,7 +1,7 @@
 """The end-to-end example in examples/synthetic_timelapse.py works.
 
-Measured (512x512, 138 frames, mp4v): matching delivery SSIM 0.997 ->
-pass; a different drawing of the same kind of scene 0.84 -> fail (limit
+Measured (512x512, 142 frames, mp4v): matching delivery SSIM 0.996 ->
+pass; a different drawing of the same kind of scene 0.85 -> fail (limit
 0.9); paste of a 240x240 detailed patch flagged at frame 71 -> review.
 """
 

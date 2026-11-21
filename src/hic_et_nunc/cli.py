@@ -61,8 +61,23 @@ def read_reference(path: str):
     return img
 
 
+def not_a_session(path: str | Path) -> bool:
+    """Return whether `path` lacks a capture log, printing why if so."""
+    if (Path(path) / "events.jsonl").is_file():
+        return False
+    print(
+        f"{path}: not a Krita capture session (no events.jsonl in it); "
+        "give one session folder, such as "
+        "~/hic-et-nunc-capture/20261114-183713",
+        file=sys.stderr,
+    )
+    return True
+
+
 def cmd_inspect(a: argparse.Namespace) -> int:
     """Verify a session's log and pictures; 1 if either fails."""
+    if not_a_session(a.session):
+        return 2
     s = Session.load(a.session)
     chain = s.chain()
     mismatches = s.snapshot_mismatches()
@@ -83,6 +98,8 @@ def cmd_inspect(a: argparse.Namespace) -> int:
 
 def cmd_trace(a: argparse.Namespace) -> int:
     """Print tracing and paste measurements for a session."""
+    if not_a_session(a.session):
+        return 2
     s = Session.load(a.session)
     ref = read_reference(a.reference)
     if ref is None:
@@ -154,6 +171,8 @@ def cmd_evaluate(a: argparse.Namespace) -> int:
         )
         return 2
     if src.is_dir():
+        if not_a_session(src):
+            return 2
         result = assess_session(
             Session.load(src),
             delivered,
@@ -233,6 +252,8 @@ def cmd_report(a: argparse.Namespace) -> int:
         )
         return 2
     if src.is_dir():
+        if any(not_a_session(path) for path in sources):
+            return 2
         rep = piece_report(sources, **args)
     else:
         try:

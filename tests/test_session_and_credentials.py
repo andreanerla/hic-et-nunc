@@ -323,6 +323,28 @@ def test_evaluate_rejects_bad_reference_spec(tmp_path, ref, capsys):
     assert cli.main(["evaluate", str(d), "--reference", "robot=x.png"]) == 2
 
 
+@pytest.mark.parametrize("command", ["inspect", "trace", "evaluate", "report"])
+def test_folder_without_log_is_a_message_not_a_traceback(
+    tmp_path, ref, capsys, command
+):
+    """A folder holding no events.jsonl gives exit 2 and one line.
+
+    The likely mistake: the capture folder instead of one session in
+    it. Before this check every command raised FileNotFoundError.
+    """
+    folder = tmp_path / "hic-et-nunc-capture"
+    (folder / "20261114-183713").mkdir(parents=True)
+    cv2.imwrite(str(tmp_path / "ref.png"), ref)
+    extra = {
+        "trace": ["--reference", str(tmp_path / "ref.png")],
+        "report": ["-o", str(tmp_path / "report.html")],
+    }.get(command, [])
+    assert cli.main([command, str(folder), *extra]) == 2
+    err = capsys.readouterr().err
+    assert "no events.jsonl" in err and len(err.splitlines()) == 1
+    assert not (tmp_path / "report.html").exists()
+
+
 def _report(d, *args):
     """Run `hic-et-nunc report`; return exit code, result and page."""
     out = d.parent / "report.html"

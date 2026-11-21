@@ -1,14 +1,16 @@
 # hic et nunc
 
 Checks whether a finished illustration is consistent with a recorded drawing
-process. Give it a time-lapse (a Procreate `.procreate` file or an exported
-time-lapse video) and the image that was delivered. It samples the frames,
-checks that the last frame matches the delivered image, and flags large
-detailed regions that appeared in a single step (pastes). If you declare
-reference images, it also measures whether the line work follows their
-edges (tracing). It prints a JSON report and a verdict from a configurable
-policy. It is a research prototype and a Python command-line tool, not a
-service.
+process. The main, most tested workflow records the drawing in Krita with
+the included plugin, then writes one HTML report about the piece. It can
+also read a time-lapse after the fact (an exported time-lapse video, or a
+Procreate `.procreate` file, never tried on a real one). Either way it
+checks that the last recorded state matches the image that was delivered,
+and flags large detailed regions that appeared in a single step (pastes).
+If you give a reference image, it also measures whether the line work
+follows its edges (tracing). It writes an HTML report, or prints a JSON
+report and a verdict from a configurable policy. It is a research
+prototype and a Python command-line tool, not a service.
 
 ## What it does not prove
 
@@ -34,14 +36,44 @@ person with one tablet. No real `.procreate` file has been used.
 
 ## Install
 
-Python ≥ 3.10. From a clone of this repository:
+Tested on macOS 15 (Apple silicon) only; Linux and Windows are untested.
+
+Needs Python ≥ 3.10: check with `python3 --version`. The `python3` that
+comes with macOS is 3.9 and won't work; install a newer one (from
+python.org, or `brew install python@3.13`) and call it by name, as below.
 
 ```bash
-python3 -m venv .venv
+git clone https://github.com/andreanerla/hic-et-nunc.git
+cd hic-et-nunc
+python3.13 -m venv .venv    # any Python ≥ 3.10
 source .venv/bin/activate
 pip install -e .            # add ".[dev]" for tests and C2PA signing
 pytest                      # with [dev]
 ```
+
+`pytest` should end with `81 passed, 49 skipped`. The skipped tests need
+the author's own Krita recordings, which aren't published.
+
+### Krita plugin
+
+Tested with Krita 5.3.4.1. The plugin is in `plugins/krita/`.
+
+1. In Krita: Settings → Manage Resources → **Open Resource Folder**.
+2. Copy `plugins/krita/hic_et_nunc_capture.desktop` and the
+   `plugins/krita/hic_et_nunc_capture/` folder into its `pykrita/`
+   subfolder (create it if it's missing).
+3. Settings → Configure Krita → **Python Plugin Manager** → enable
+   "Hic et nunc Capture (spike)". Restart Krita.
+4. Open or create the document, then Tools → Scripts → **Hic et nunc:
+   start/stop capture**. Draw. Run the same action again to stop.
+
+Each recording is one folder, `~/hic-et-nunc-capture/<date>-<time>/`
+(for example `20261114-183713`), holding the log and the canvas
+snapshots. Give that folder, not `~/hic-et-nunc-capture/` itself, to
+`hic-et-nunc report`. Add reference images with Krita's Reference Images
+tool, not as a layer (see Known limitations), and save the document: the
+saved `.kra` is what you pass as `--reference`. More detail, and the
+recordings the limits were measured on, in `plugins/krita/SPIKE.md`.
 
 ## Usage
 
@@ -75,9 +107,9 @@ saved `.kra` holding it) and `--delivered` are optional. A piece recorded
 over several Krita sessions is given as all its session directories, in
 the order they were recorded: each session must start where the previous
 one ended, and only the last is compared with the delivered image. A
-recording whose canvas already holds more than 1% of the final drawing
-when it starts gets "needs review", unless it follows an earlier session
-of the same piece. The page gives:
+recording whose canvas already has marks on more than 0.01% of it when it
+starts gets "needs review", unless it follows an earlier session of the
+same piece (see Known limitations). The page gives:
 
 - a result: **consistent** (nothing to look at), **needs review** (the
   line work follows the reference's outlines, an image was pasted, or
@@ -116,14 +148,23 @@ final size after scaling; a control session with fills and undo gives
 
 ```bash
 python examples/synthetic_timelapse.py example-out
-hic-et-nunc evaluate example-out/timelapse.mp4 --delivered example-out/delivered.png   # pass,   SSIM 0.997
-hic-et-nunc evaluate example-out/timelapse.mp4 --delivered example-out/other.png       # fail,   SSIM 0.84: a different drawing
+hic-et-nunc evaluate example-out/timelapse.mp4 --delivered example-out/delivered.png   # pass,   SSIM 0.996
+hic-et-nunc evaluate example-out/timelapse.mp4 --delivered example-out/other.png       # fail,   SSIM 0.85: a different drawing
 hic-et-nunc evaluate example-out/pasted.mp4    --delivered example-out/pasted.png      # review, paste at frame 71
 ```
 
 Note the second case: a different drawing of a similar flat-colour scene
-still scores 0.84 against a 0.9 limit. The margin is small, which is one
+still scores 0.85 against a 0.9 limit. The margin is small, which is one
 reason the thresholds need calibration on real work.
+
+The same three cases as reviewer reports; open the `.html` files in a
+browser:
+
+```bash
+hic-et-nunc report example-out/timelapse.mp4 --delivered example-out/delivered.png -o example-out/same.html     # consistent
+hic-et-nunc report example-out/timelapse.mp4 --delivered example-out/other.png -o example-out/other.html        # inconsistent
+hic-et-nunc report example-out/pasted.mp4 --delivered example-out/pasted.png -o example-out/pasted.html         # needs review
+```
 
 Output of the first command:
 
@@ -134,10 +175,10 @@ Output of the first command:
   "reasons": ["pass: no issues found"],
   "evidence": {
     "tier": "weak",
-    "consistency_ssim": 0.9968,
+    "consistency_ssim": 0.9964,
     "imports": [],
     "paste_steps": [],
-    "notes": ["time-lapse: 138 frames sampled"],
+    "notes": ["time-lapse: 142 frames sampled"],
     ...
   },
   "tracing": {}
@@ -167,7 +208,9 @@ Output of the first command:
   `p_value`: the share of 200 random placements of the reference (rotated
   and moved on the canvas) that score as high.
 - Verdicts: `pass`, `pass_with_disclosure`, `review`, `fail`. Exit code 0
-  for the first two, 1 for the others, 2 for unreadable input.
+  for the first two, 1 for the others, 2 for unreadable input. `report`
+  exits 0 whenever it writes the page, whatever the result, and 2 for
+  unreadable input.
 
 Each time-lapse is sampled to at most 300 frames, downscaled to 1024 px,
 grayscale.
