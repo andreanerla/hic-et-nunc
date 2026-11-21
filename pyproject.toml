@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hic-et-nunc"
 version = "0.1.0"
-description = "Process-based evidence of human authorship for commissioned illustration"
+description = "Checks whether a finished illustration is consistent with a recorded drawing process"
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.10"

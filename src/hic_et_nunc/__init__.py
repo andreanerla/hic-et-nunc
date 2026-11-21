@@ -1,3 +1,3 @@
-"""Process-based evidence of human authorship for illustration."""
+"""Check an illustration against its recorded drawing process."""
 
 __version__ = "0.1.0"

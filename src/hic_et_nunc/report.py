@@ -65,8 +65,9 @@ KRITA_LIMITS = [
     "A pasted image's final size is estimated from how much its layer's "
     "outline grew or shrank. If the whole layer is resized, everything "
     "on it counts; if only part of it is, the estimate is off.",
-    "The checkpoints that make the recording tamper-evident are kept "
-    "with the recording, not with an independent timestamp service. "
+    "The checkpoints that let this report detect edits to the recording "
+    "are kept with the recording, not with an independent timestamp "
+    "service. "
     "Someone with access to it could rebuild the whole recording.",
     "The limits used here come from a handful of test sessions by one "
     "person on one tablet, not from many illustrators.",
